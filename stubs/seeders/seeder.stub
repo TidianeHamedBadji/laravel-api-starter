@@ -1,0 +1,74 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\{{ MODEL_NAME }};
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * Class {{ CLASS_NAME }}
+ *
+ * Seeder for {{ MODEL_NAME }} model
+ */
+class {{ CLASS_NAME }} extends Seeder
+{
+    /**
+     * Run the database seeds.
+     */
+    public function run(): void
+    {
+        // Disable foreign key checks for this seeder
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+
+        // Clear existing data
+        {{ MODEL_NAME }}::truncate();
+
+        // Create sample data
+        $sampleData = $this->getSampleData();
+
+        foreach ($sampleData as $data) {
+            {{ MODEL_NAME }}::create($data);
+        }
+
+        // You can also use factories if available
+        // {{ MODEL_NAME }}::factory(50)->create();
+
+        // Re-enable foreign key checks
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
+        $this->command->info('{{ MODEL_NAME }} seeder completed successfully!');
+    }
+
+    /**
+     * Get sample data for seeding.
+     *
+     * @return array
+     */
+    private function getSampleData(): array
+    {
+        return [
+            [
+                'name' => 'Sample {{ MODEL_NAME }} 1',
+                'description' => 'This is a sample {{ MODEL_NAME }} for testing purposes.',
+                'status' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'name' => 'Sample {{ MODEL_NAME }} 2',
+                'description' => 'Another sample {{ MODEL_NAME }} with different data.',
+                'status' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'name' => 'Inactive {{ MODEL_NAME }}',
+                'description' => 'This is an inactive {{ MODEL_NAME }} for testing.',
+                'status' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ];
+    }
+}

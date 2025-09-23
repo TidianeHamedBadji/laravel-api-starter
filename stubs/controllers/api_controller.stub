@@ -1,0 +1,115 @@
+<?php
+
+namespace {{ NAMESPACE }};
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\{{ MODEL_NAME }}Request;
+use App\Http\Resources\{{ MODEL_NAME }}Resource;
+use App\Models\{{ MODEL_NAME }};
+use App\Services\{{ MODEL_NAME }}Service;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+
+/**
+ * Class {{ CLASS_NAME }}
+ *
+ * @package {{ NAMESPACE }}
+ */
+class {{ CLASS_NAME }} extends Controller
+{
+    /**
+     * Create a new controller instance.
+     */
+    public function __construct(
+        protected {{ MODEL_NAME }}Service ${{ MODEL_VARIABLE }}Service
+    ) {
+        $this->middleware('auth:sanctum');
+    }
+
+    /**
+     * Display a listing of the resource.
+     */
+    public function index(Request $request): AnonymousResourceCollection
+    {
+        ${{ PLURAL_VARIABLE }} = $this->{{ MODEL_VARIABLE }}Service->getAllPaginated(
+            $request->get('per_page', 15),
+            $request->only(['search', 'status', 'sort', 'direction'])
+        );
+
+        return {{ MODEL_NAME }}Resource::collection(${{ PLURAL_VARIABLE }});
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store({{ MODEL_NAME }}Request $request): JsonResponse
+    {
+        ${{ MODEL_VARIABLE }} = $this->{{ MODEL_VARIABLE }}Service->create($request->validated());
+
+        return response()->json([
+            'message' => '{{ MODEL_NAME }} created successfully',
+            'data' => new {{ MODEL_NAME }}Resource(${{ MODEL_VARIABLE }})
+        ], 201);
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show({{ MODEL_NAME }} ${{ MODEL_VARIABLE }}): JsonResponse
+    {
+        return response()->json([
+            'data' => new {{ MODEL_NAME }}Resource(${{ MODEL_VARIABLE }})
+        ]);
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update({{ MODEL_NAME }}Request $request, {{ MODEL_NAME }} ${{ MODEL_VARIABLE }}): JsonResponse
+    {
+        $updated{{ MODEL_NAME }} = $this->{{ MODEL_VARIABLE }}Service->update(${{ MODEL_VARIABLE }}, $request->validated());
+
+        return response()->json([
+            'message' => '{{ MODEL_NAME }} updated successfully',
+            'data' => new {{ MODEL_NAME }}Resource($updated{{ MODEL_NAME }})
+        ]);
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy({{ MODEL_NAME }} ${{ MODEL_VARIABLE }}): JsonResponse
+    {
+        $this->{{ MODEL_VARIABLE }}Service->delete(${{ MODEL_VARIABLE }});
+
+        return response()->json([
+            'message' => '{{ MODEL_NAME }} deleted successfully'
+        ]);
+    }
+
+    /**
+     * Restore the specified resource from storage.
+     */
+    public function restore(int $id): JsonResponse
+    {
+        ${{ MODEL_VARIABLE }} = $this->{{ MODEL_VARIABLE }}Service->restore($id);
+
+        return response()->json([
+            'message' => '{{ MODEL_NAME }} restored successfully',
+            'data' => new {{ MODEL_NAME }}Resource(${{ MODEL_VARIABLE }})
+        ]);
+    }
+
+    /**
+     * Force delete the specified resource from storage.
+     */
+    public function forceDelete(int $id): JsonResponse
+    {
+        $this->{{ MODEL_VARIABLE }}Service->forceDelete($id);
+
+        return response()->json([
+            'message' => '{{ MODEL_NAME }} permanently deleted'
+        ]);
+    }
+}

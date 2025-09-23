@@ -1,0 +1,28 @@
+#!/usr/bin/env php
+<?php
+
+/**
+ * Laravel API Starter CLI Tool
+ * 
+ * This is a standalone CLI tool for the Laravel API Starter package.
+ * It can be used to generate API components outside of a Laravel project.
+ */
+
+if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
+    require __DIR__ . '/../vendor/autoload.php';
+} else if (file_exists(__DIR__ . '/../../../autoload.php')) {
+    require __DIR__ . '/../../../autoload.php';
+} else {
+    die('Could not find autoload.php. Please run composer install.');
+}
+
+use Symfony\Component\Console\Application;
+use TidianeHamed\LaravelApiStarter\Commands\StandaloneGenerateCommand;
+
+$app = new Application('Laravel API Starter', '1.0.0');
+
+// Register commands
+$app->add(new StandaloneGenerateCommand());
+
+// Run the application
+$app->run();

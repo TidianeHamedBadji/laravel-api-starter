@@ -1,0 +1,276 @@
+<?php
+
+namespace {{ NAMESPACE }};
+
+use App\Models\{{ MODEL_NAME }};
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
+/**
+ * Class {{ CLASS_NAME }}
+ *
+ * Service class for {{ MODEL_NAME }} business logic
+ *
+ * @package {{ NAMESPACE }}
+ */
+class {{ CLASS_NAME }}
+{
+    /**
+     * Create a new service instance.
+     */
+    public function __construct(
+        protected {{ MODEL_NAME }} ${{ MODEL_VARIABLE }}
+    ) {}
+
+    /**
+     * Get all {{ MODEL_VARIABLE }}s with pagination and filters.
+     */
+    public function getAllPaginated(int $perPage = 15, array $filters = []): LengthAwarePaginator
+    {
+        $query = $this->{{ MODEL_VARIABLE }}->newQuery();
+
+        // Apply filters
+        $query = $this->applyFilters($query, $filters);
+
+        // Apply sorting
+        $query = $this->applySorting($query, $filters);
+
+        return $query->paginate($perPage);
+    }
+
+    /**
+     * Get all {{ MODEL_VARIABLE }}s without pagination.
+     */
+    public function getAll(array $filters = []): \Illuminate\Database\Eloquent\Collection
+    {
+        $query = $this->{{ MODEL_VARIABLE }}->newQuery();
+
+        // Apply filters
+        $query = $this->applyFilters($query, $filters);
+
+        // Apply sorting
+        $query = $this->applySorting($query, $filters);
+
+        return $query->get();
+    }
+
+    /**
+     * Find a {{ MODEL_VARIABLE }} by ID.
+     */
+    public function findById(int $id): {{ MODEL_NAME }}
+    {
+        return $this->{{ MODEL_VARIABLE }}->findOrFail($id);
+    }
+
+    /**
+     * Find a {{ MODEL_VARIABLE }} by ID with caching.
+     */
+    public function findByIdCached(int $id, int $ttl = 3600): {{ MODEL_NAME }}
+    {
+        $cacheKey = "{{ MODEL_VARIABLE }}_{$id}";
+        
+        return Cache::remember($cacheKey, $ttl, function () use ($id) {
+            return $this->findById($id);
+        });
+    }
+
+    /**
+     * Create a new {{ MODEL_VARIABLE }}.
+     */
+    public function create(array $data): {{ MODEL_NAME }}
+    {
+        try {
+            DB::beginTransaction();
+
+            ${{ MODEL_VARIABLE }} = $this->{{ MODEL_VARIABLE }}->create($data);
+
+            // Clear related caches
+            $this->clearCache();
+
+            DB::commit();
+
+            Log::info('{{ MODEL_NAME }} created', ['id' => ${{ MODEL_VARIABLE }}->id, 'data' => $data]);
+
+            return ${{ MODEL_VARIABLE }};
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to create {{ MODEL_NAME }}', ['data' => $data, 'error' => $e->getMessage()]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Update an existing {{ MODEL_VARIABLE }}.
+     */
+    public function update({{ MODEL_NAME }} ${{ MODEL_VARIABLE }}, array $data): {{ MODEL_NAME }}
+    {
+        try {
+            DB::beginTransaction();
+
+            ${{ MODEL_VARIABLE }}->update($data);
+            ${{ MODEL_VARIABLE }}->refresh();
+
+            // Clear related caches
+            $this->clearCache(${{ MODEL_VARIABLE }}->id);
+
+            DB::commit();
+
+            Log::info('{{ MODEL_NAME }} updated', ['id' => ${{ MODEL_VARIABLE }}->id, 'data' => $data]);
+
+            return ${{ MODEL_VARIABLE }};
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to update {{ MODEL_NAME }}', [
+                'id' => ${{ MODEL_VARIABLE }}->id,
+                'data' => $data,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Delete a {{ MODEL_VARIABLE }} (soft delete).
+     */
+    public function delete({{ MODEL_NAME }} ${{ MODEL_VARIABLE }}): bool
+    {
+        try {
+            DB::beginTransaction();
+
+            $result = ${{ MODEL_VARIABLE }}->delete();
+
+            // Clear related caches
+            $this->clearCache(${{ MODEL_VARIABLE }}->id);
+
+            DB::commit();
+
+            Log::info('{{ MODEL_NAME }} deleted', ['id' => ${{ MODEL_VARIABLE }}->id]);
+
+            return $result;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to delete {{ MODEL_NAME }}', [
+                'id' => ${{ MODEL_VARIABLE }}->id,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Restore a soft-deleted {{ MODEL_VARIABLE }}.
+     */
+    public function restore(int $id): {{ MODEL_NAME }}
+    {
+        ${{ MODEL_VARIABLE }} = $this->{{ MODEL_VARIABLE }}->withTrashed()->findOrFail($id);
+
+        if (!${{ MODEL_VARIABLE }}->trashed()) {
+            throw new \InvalidArgumentException('{{ MODEL_NAME }} is not deleted');
+        }
+
+        try {
+            DB::beginTransaction();
+
+            ${{ MODEL_VARIABLE }}->restore();
+
+            // Clear related caches
+            $this->clearCache($id);
+
+            DB::commit();
+
+            Log::info('{{ MODEL_NAME }} restored', ['id' => $id]);
+
+            return ${{ MODEL_VARIABLE }};
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to restore {{ MODEL_NAME }}', ['id' => $id, 'error' => $e->getMessage()]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Force delete a {{ MODEL_VARIABLE }} (permanent deletion).
+     */
+    public function forceDelete(int $id): bool
+    {
+        ${{ MODEL_VARIABLE }} = $this->{{ MODEL_VARIABLE }}->withTrashed()->findOrFail($id);
+
+        try {
+            DB::beginTransaction();
+
+            $result = ${{ MODEL_VARIABLE }}->forceDelete();
+
+            // Clear related caches
+            $this->clearCache($id);
+
+            DB::commit();
+
+            Log::info('{{ MODEL_NAME }} force deleted', ['id' => $id]);
+
+            return $result;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to force delete {{ MODEL_NAME }}', ['id' => $id, 'error' => $e->getMessage()]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Apply filters to the query.
+     */
+    protected function applyFilters(Builder $query, array $filters): Builder
+    {
+        if (!empty($filters['search'])) {
+            $query->where(function ($q) use ($filters) {
+                $q->where('name', 'like', '%' . $filters['search'] . '%')
+                  ->orWhere('description', 'like', '%' . $filters['search'] . '%');
+            });
+        }
+
+        if (isset($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        return $query;
+    }
+
+    /**
+     * Apply sorting to the query.
+     */
+    protected function applySorting(Builder $query, array $filters): Builder
+    {
+        $sortField = $filters['sort'] ?? 'created_at';
+        $sortDirection = $filters['direction'] ?? 'desc';
+
+        // Validate sort field
+        $allowedSortFields = ['id', 'name', 'status', 'created_at', 'updated_at'];
+        if (!in_array($sortField, $allowedSortFields)) {
+            $sortField = 'created_at';
+        }
+
+        // Validate sort direction
+        $sortDirection = in_array(strtolower($sortDirection), ['asc', 'desc']) 
+            ? strtolower($sortDirection) 
+            : 'desc';
+
+        return $query->orderBy($sortField, $sortDirection);
+    }
+
+    /**
+     * Clear related caches.
+     */
+    protected function clearCache(?int $id = null): void
+    {
+        // Clear specific {{ MODEL_VARIABLE }} cache
+        if ($id) {
+            Cache::forget("{{ MODEL_VARIABLE }}_{$id}");
+        }
+
+        // Clear general {{ MODEL_VARIABLE }} caches (you can expand this as needed)
+        Cache::tags(['{{ MODEL_VARIABLE }}s'])->flush();
+    }
+}
